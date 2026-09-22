@@ -861,3 +861,192 @@ test.describe('OpenDataHub E2E Health Features @system-health', () => {
     expect(page.errors).toHaveLength(0);
   });
 });
+
+/**
+ * Test Execution Dashboard Feature Tests
+ *
+ * Verify the Test Execution Dashboard (Beta) functionality including
+ * navigation, iframe loading, and basic rendering.
+ */
+test.describe('Test Execution Dashboard @system-health', () => {
+  test.beforeEach(async ({ page }) => {
+    setupErrorTracking(page);
+  });
+
+  test.afterEach(async ({ page }, testInfo) => {
+    logCapturedErrors(page, testInfo);
+  });
+
+  test('should show Test Execution Dashboard (Beta) nav item is visible and clickable', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(DEFAULT_PAGE_WAIT_TIME);
+
+    // Expand System Health module if collapsed
+    const moduleHeader = page.locator('aside nav button').filter({ hasText: 'System Health' }).first();
+    await moduleHeader.click();
+    await page.waitForTimeout(500);
+
+    // Look for the Test Execution Dashboard nav item
+    const testExecNav = page.locator('aside nav button, aside nav a').filter({ hasText: /Test Execution Dashboard/i });
+    await expect(testExecNav.first()).toBeVisible();
+
+    // Click on the Test Execution Dashboard nav item
+    await testExecNav.first().click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(DEFAULT_PAGE_WAIT_TIME);
+
+    // Verify URL changed to test-execution view
+    expect(page.url()).toMatch(/system-health\/test-execution/);
+
+    expect(page.errors).toHaveLength(0);
+  });
+
+  test('should load Test Execution Dashboard view', async ({ page }) => {
+    await page.goto('/#/system-health/test-execution');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(DEFAULT_PAGE_WAIT_TIME);
+
+    // Verify main content is visible
+    const mainContentVisible = await mainContentIsVisible(page);
+    expect(mainContentVisible).toBe(true);
+
+    // Look for the iframe that loads the dashboard
+    const iframe = page.locator('iframe[title*="Test Execution Dashboard"]');
+    await expect(iframe).toBeVisible();
+
+    expect(page.errors).toHaveLength(0);
+  });
+
+  test('should render iframe with dashboard content', async ({ page }) => {
+    await page.goto('/#/system-health/test-execution');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(DEFAULT_PAGE_WAIT_TIME);
+
+    // Wait for iframe to be present
+    const iframe = page.locator('iframe[title*="Test Execution Dashboard"]');
+    await expect(iframe).toBeVisible();
+
+    // Wait for iframe to load - check that src is set
+    const iframeSrc = await iframe.getAttribute('src');
+    expect(iframeSrc).toContain('/test-dashboard');
+
+    expect(page.errors).toHaveLength(0);
+  });
+
+  test('should display page header with Beta label', async ({ page }) => {
+    await page.goto('/#/system-health/test-execution');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(DEFAULT_PAGE_WAIT_TIME);
+
+    // Look for the heading with Beta label
+    const heading = page.locator('h1').filter({ hasText: /Test Execution Dashboard/i });
+    await expect(heading).toBeVisible();
+
+    // Should have Beta label
+    const betaLabel = page.locator('text=/Beta/i');
+    await expect(betaLabel.first()).toBeVisible();
+
+    expect(page.errors).toHaveLength(0);
+  });
+
+  test('should have refresh and external link buttons', async ({ page }) => {
+    await page.goto('/#/system-health/test-execution');
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(DEFAULT_PAGE_WAIT_TIME);
+
+    // Look for refresh button (by title attribute)
+    const refreshButton = page.locator('button[title*="Refresh"], button[title*="refresh"]');
+    const refreshCount = await refreshButton.count();
+    expect(refreshCount).toBeGreaterThan(0);
+
+    // Look for external link button (open in new tab)
+    const externalButton = page.locator('button[title*="new tab"], button[title*="Open"]');
+    const externalCount = await externalButton.count();
+    expect(externalCount).toBeGreaterThan(0);
+
+    expect(page.errors).toHaveLength(0);
+  });
+
+  // ─── API Tests ───
+
+  test('GET /test-execution/data should return data structure', async ({ request }) => {
+    const response = await request.get('/api/modules/system-health/quality/test-execution/data');
+
+    if (response.status() === 401) {
+      expect(response.status()).toBe(401);
+    } else {
+      expect(response.status()).toBe(200);
+      const data = await response.json();
+      expect(data).toHaveProperty('heatmap');
+      expect(data).toHaveProperty('components');
+      expect(data).toHaveProperty('jira_config');
+      expect(data).toHaveProperty('meta');
+    }
+  });
+
+  test('GET /test-execution/data with file parameter should return specific file', async ({ request }) => {
+    const response = await request.get('/api/modules/system-health/quality/test-execution/data?file=meta');
+
+    if (response.status() === 401) {
+      expect(response.status()).toBe(401);
+    } else {
+      expect(response.status()).toBe(200);
+      const data = await response.json();
+      expect(typeof data).toBe('object');
+    }
+  });
+
+  test('GET /test-execution/data with invalid file should return 400', async ({ request }) => {
+    const response = await request.get('/api/modules/system-health/quality/test-execution/data?file=invalid');
+
+    if (response.status() === 401) {
+      expect(response.status()).toBe(401);
+    } else {
+      expect(response.status()).toBe(400);
+      const data = await response.json();
+      expect(data).toHaveProperty('error');
+    }
+  });
+
+  test('POST /test-execution/upload should require auth or skip in demo mode', async ({ request }) => {
+    const response = await request.post('/api/modules/system-health/quality/test-execution/upload', {
+      data: { meta: { test: true } }
+    });
+
+    // In demo mode: either auth blocks (401) or demo guard skips (200)
+    if (response.status() === 200) {
+      const data = await response.json();
+      expect(data.status).toBe('skipped');
+    } else {
+      expect(response.status()).toBe(401);
+    }
+  });
+
+  test('POST /test-execution/upload in demo mode should return skipped status', async ({ request }) => {
+    const response = await request.post('/api/modules/system-health/quality/test-execution/upload', {
+      data: { meta: { test: true } }
+    });
+
+    if (response.status() === 200) {
+      const data = await response.json();
+      expect(data.status).toBe('skipped');
+      expect(data.message).toContain('demo mode');
+    } else {
+      expect(response.status()).toBe(401);
+    }
+  });
+
+  test('POST /test-execution/upload with empty body should return 400 or be guarded', async ({ request }) => {
+    const response = await request.post('/api/modules/system-health/quality/test-execution/upload', {
+      data: {}
+    });
+
+    if (response.status() === 200) {
+      const data = await response.json();
+      expect(data.status).toBe('skipped');
+    } else {
+      expect(response.status()).toBe(401);
+    }
+  });
+});

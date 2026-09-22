@@ -54,6 +54,7 @@ export const viewOwners = {
   'product-builds/drop-detail':                    'Pavol Pitonak',
   'product-builds/overview':                       'Giulia Naponiello',
   'product-builds/package-analysis':               'Einat Pacifici',
+  'product-builds/package-request':                'André Lustosa',
   'product-builds/rhaiis':                         'Pavol Pitonak',
   'product-builds/rhel-ai':                        'Pavol Pitonak',
   'product-builds/search':                         'Rishabh Kothari',
@@ -76,6 +77,7 @@ export const viewOwners = {
   'system-health/e2e-run-detail':                  'Ajay Jaganathan',
   'system-health/odh-e2e-health':                  'Ajay Jaganathan',
   'system-health/quality-analysis':                'Dana Gutride',
+  'system-health/test-execution':                  'Arthy Loganathan',
 
   // team-tracker
   'team-tracker/home':                             'Dipanshu Gupta',
@@ -132,7 +134,6 @@ export const viewOwners = {
   'releases/reports/capacity-commitment':          'Alex Corvin',
   'releases/reports/cve-sustaining':               'Saiesh Prabhu',
   'releases/reports/feature-pressure':             'Dimitri Saridakis',
-  'releases/reports/program-hygiene':              'Alex Corvin',
   'releases/reports/release-readiness':            'Arthy Loganathan',
   'releases/reports/rhoai-component-architectures': 'Waldemar Znoinski',
   'releases/reports/tv-fv-delta':                  'Dimitri Saridakis',
